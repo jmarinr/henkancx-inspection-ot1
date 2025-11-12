@@ -1,13 +1,11 @@
-
 import React, { useEffect, useRef, useState } from 'react'
 
-function useSpeech() {
+export default function VoiceDock() {
   const [support, setSupport] = useState(false)
   const [listening, setListening] = useState(false)
-  const [result, setResult] = useState('')
   const recRef = useRef(null)
 
-  useEffect(()=>{
+  useEffect(()=> {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) return
     setSupport(true)
@@ -17,55 +15,32 @@ function useSpeech() {
     rec.interimResults = true
     rec.onresult = (e)=>{
       let s = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        s += e.results[i][0].transcript
+      for (let i=e.resultIndex; i<e.results.length; i++) s += e.results[i][0].transcript
+      const el = document.activeElement
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+        const start = el.selectionStart ?? el.value.length
+        const end = el.selectionEnd ?? el.value.length
+        el.setRangeText((el.value ? ' ' : '') + s, start, end, 'end')
+        el.dispatchEvent(new Event('input', { bubbles: true }))
       }
-      setResult(s)
     }
     rec.onend = ()=> setListening(false)
     recRef.current = rec
   }, [])
 
-  const start = ()=> { if (recRef.current && !listening){ setResult(''); recRef.current.start(); setListening(true)} }
-  const stop = ()=> { if (recRef.current && listening){ recRef.current.stop(); setListening(false)} }
-
-  return { support, listening, result, start, stop }
-}
-
-export default function VoiceDock() {
-  const { support, listening, result, start, stop } = useSpeech()
-  const [attach, setAttach] = useState(true)
-
-  useEffect(()=>{
-    if (!attach) return
-    const el = document.activeElement
-    if (!el) return
-    if (result && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
-      const cursor = el.selectionStart || el.value?.length || 0
-      const startText = el.value?.slice(0, cursor) || ''
-      const endText = el.value?.slice(cursor) || ''
-      el.value = (startText + result + endText).replace(/\s+/g, ' ').trimStart()
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-    }
-  }, [result, attach])
-
   if (!support) return null
 
+  const toggle = ()=> {
+    if (!recRef.current) return
+    if (listening){ recRef.current.stop(); setListening(false) }
+    else { recRef.current.start(); setListening(true) }
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <div className="card shadow-lg px-3 py-2 flex items-center gap-2">
-        <button
-          className={`btn ${listening ? 'btn-secondary' : 'btn-primary'}`}
-          onClick={listening ? stop : start}
-          title={listening ? 'Detener dictado' : 'Dictar por voz'}
-        >
-          {listening ? 'Detener' : 'Dictar'}
-        </button>
-        <label className="text-xs flex items-center gap-1">
-          <input type="checkbox" checked={attach} onChange={e=>setAttach(e.target.checked)} />
-          Insertar en campo activo
-        </label>
-      </div>
+    <div className="fixed right-4 bottom-24 z-40">
+      <button onClick={toggle} className={`rounded-full shadow-lg text-white px-4 py-3 ${listening ? 'bg-purple-600' : 'bg-blue-600'}`}>
+        {listening ? '⏹ Detener dictado' : '🎤 Dictar en campo activo'}
+      </button>
     </div>
   )
 }
