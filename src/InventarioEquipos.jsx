@@ -1,54 +1,53 @@
-import React, { useState, useEffect } from 'react'
-import schema from './schemas/inventario_equipos.json'
-import FotosSeccion from './FotosSeccion'
+import React, { useEffect, useState } from 'react'
+import SectionLayout from './SectionLayout.jsx'
+import VoiceButton from './VoiceButton.jsx'
 
-export default function InventarioEquipos({ inspection, save }) {
-  const [items, setItems] = useState(inspection.formularios.inventarioEquipos.items || [])
-  const [photos, setPhotos] = useState(inspection.formularios.inventarioEquipos.fotos || [])
+export default function InventarioEquipos({ inspection, save, onBack }) {
+  const initial = inspection?.formularios?.inventarioEquipos?.items || []
+  const [items, setItems] = useState(initial.length ? initial : [{ tipo:'', marca:'', modelo:'', serie:'' }])
 
-  useEffect(() => {
+  useEffect(()=>{
     save(prev => ({
       ...prev,
-      formularios: { ...prev.formularios, inventarioEquipos: { items, fotos: photos } }
+      formularios: {
+        ...prev.formularios,
+        inventarioEquipos: { items }
+      }
     }))
-  }, [items, photos, save])
+  }, [items, save])
 
-  const add = () => setItems([...items, { equipo:'', marca:'', modelo:'', serie:'', ubicacion:'', estado:'' }])
-  const setItem = (i, name, value) => {
-    const arr = items.slice(); arr[i] = { ...arr[i], [name]: value }; setItems(arr)
+  const update = (i, key, val) => {
+    const next = items.slice()
+    next[i] = { ...next[i], [key]: val }
+    setItems(next)
   }
-  const remove = (i) => { const arr = items.slice(); arr.splice(i,1); setItems(arr) }
+
+  const addRow = () => setItems(prev => [...prev, { tipo:'', marca:'', modelo:'', serie:'' }])
+  const delRow = (i) => setItems(prev => prev.filter((_,idx)=>idx!==i))
 
   return (
-    <div className="container px-4 py-6 space-y-4">
-      <div className="card">
-        <h3 className="text-xl font-bold mb-4">{schema.title}</h3>
-        <button onClick={add} className="btn btn-primary mb-3">+ Agregar equipo</button>
-        <div className="space-y-3">
-          {items.map((it, idx)=>(
-            <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 border rounded-lg p-3">
-              {schema.fields.map(f=>(
-                <div key={f.name}>
-                  <label className="block text-sm font-medium mb-1">{f.label}</label>
-                  {f.type==='select' ? (
-                    <select className="input-field" value={it[f.name]||''} onChange={e=>setItem(idx, f.name, e.target.value)}>
-                      <option value="">Seleccionar</option>
-                      {f.options.map(o=>(<option key={o} value={o}>{o}</option>))}
-                    </select>
-                  ) : (
-                    <input className="input-field" value={it[f.name]||''} onChange={e=>setItem(idx, f.name, e.target.value)} />
-                  )}
+    <SectionLayout title="Inventario de equipos" onBack={onBack} onNext={onBack}>
+      <div className="space-y-3">
+        {items.map((it, i) => (
+          <div key={i} className="card">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              {['tipo','marca','modelo','serie'].map((k)=>(
+                <div className="space-y-1" key={k}>
+                  <label className="block text-sm font-medium capitalize">{k}</label>
+                  <div className="flex gap-2">
+                    <input className="input-field flex-1" value={it[k]||''} onChange={e=>update(i,k,e.target.value)} />
+                    <VoiceButton onText={(t)=>update(i,k,(it[k]||'')+' '+t)} />
+                  </div>
                 </div>
               ))}
-              <div className="md:col-span-3 flex justify-end">
-                <button onClick={()=>remove(idx)} className="btn btn-secondary">Eliminar</button>
-              </div>
             </div>
-          ))}
-        </div>
+            <div className="flex justify-end">
+              <button className="btn btn-secondary mt-2" onClick={()=>delRow(i)}>Eliminar</button>
+            </div>
+          </div>
+        ))}
+        <button className="btn btn-primary" onClick={addRow}>Añadir equipo</button>
       </div>
-
-      <FotosSeccion seccionKey="inventarioEquipos" photos={photos} setPhotos={setPhotos} onOCRData={()=>{}} />
-    </div>
+    </SectionLayout>
   )
 }
