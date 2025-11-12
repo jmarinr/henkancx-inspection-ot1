@@ -16,28 +16,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 🔓 Descomprime cualquier ZIP que esté en la raíz (tu paquete v2.0)
+      # 1) Descomprimir cualquier ZIP en la raíz
       - name: Unzip source
         run: |
           sudo apt-get update && sudo apt-get install -y unzip
-          for z in *.zip; do
-            [ -f "$z" ] && unzip -o "$z" -d . && rm "$z";
-          done
+          set -e
+          echo "Archivos en raíz antes de unzip:"
           ls -la
+          for z in *.zip; do
+            if [ -f "$z" ]; then
+              echo "Descomprimiendo $z ..."
+              unzip -o "$z" -d .
+              rm -f "$z"
+            fi
+          done
+          echo "Archivos en raíz después de unzip:"
+          ls -la
+
+      # 2) Encontrar automáticamente el directorio del proyecto (donde está package.json)
+      - id: findpkg
+        name: Locate project root
+        run: |
+          set -e
+          FILE=$(find . -maxdepth 3 -name package.json | head -n 1 || true)
+          if [ -z "$FILE" ]; then
+            echo "❌ No se encontró package.json"; exit 1
+          fi
+          WD=$(dirname "$FILE")
+          echo "workdir=$WD" >> $GITHUB_OUTPUT
+          echo "📁 Proyecto en: $WD"
 
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
 
       - name: Install
+        working-directory: ${{ steps.findpkg.outputs.workdir }}
         run: npm install
 
       - name: Build
+        working-directory: ${{ steps.findpkg.outputs.workdir }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ${{ steps.findpkg.outputs.workdir }}/dist
 
   deploy:
     environment:
