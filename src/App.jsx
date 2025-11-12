@@ -14,6 +14,23 @@ import SignaturePad from './SignaturePad.jsx'
 import InspectionComplete from './InspectionComplete.jsx'
 import VoiceDock from './VoiceDock.jsx'
 
+// --- Sanity check: si algún import viene undefined, React lanza el error #301.
+const __components = {
+  Header, Login, MenuWizard, InfoBasica, Vehiculo,
+  SistemaTierras, InfraestructuraTorre, InventarioEquipos,
+  MantenimientoSitio, EvidenciaConsolidada, PreventivoMG,
+  SignaturePad, InspectionComplete, VoiceDock,
+}
+Object.entries(__components).forEach(([name, mod]) => {
+  const ok = typeof mod === 'function' || (mod && typeof mod === 'object')
+  if (!ok) {
+    console.error(`❌ Import inválido: ${name} =`, mod)
+    throw new Error(
+      `Component "${name}" es undefined. Revisa su ruta y que tenga "export default".`
+    )
+  }
+})
+
 const VIEWS = {
   MENU: 'menu',
   INFO: 'infoBasica',
@@ -28,13 +45,13 @@ const VIEWS = {
   COMPLETE: 'complete',
 }
 
-const emptyInspection = (id='TEMP') => ({
+const emptyInspection = (id = 'TEMP') => ({
   id,
   startedAt: null,
   finishedAt: null,
   proveedor: '',
   ot: '',
-  sitio: { nombre:'', idSitio:'', fechaProgramada:'', coords:null },
+  sitio: { nombre: '', idSitio: '', fechaProgramada: '', coords: null },
   vehiculo: {},
   formularios: {},
   __progress: 0,
@@ -43,19 +60,23 @@ const emptyInspection = (id='TEMP') => ({
 export default function App() {
   const [tech, setTech] = useState(localStorage.getItem('tecnicoCode') || '')
   const [view, setView] = useState(VIEWS.MENU)
-  const [inspection, setInspection] = useState(()=>{
+  const [inspection, setInspection] = useState(() => {
     const raw = localStorage.getItem('activeInspection')
     return raw ? JSON.parse(raw) : emptyInspection(String(Date.now()))
   })
 
-  // Persistencia
-  useEffect(()=>{ localStorage.setItem('activeInspection', JSON.stringify(inspection)) },[inspection])
+  // Persistencia local
+  useEffect(() => {
+    localStorage.setItem('activeInspection', JSON.stringify(inspection))
+  }, [inspection])
 
-  const save = (updater) => setInspection(prev => (typeof updater === 'function' ? updater(prev) : updater))
+  const save = (updater) =>
+    setInspection((prev) => (typeof updater === 'function' ? updater(prev) : updater))
+
   const setField = (path, value) => {
-    // path style: 'sitio.nombre' or 'formularios.x.y'
-    save(prev => {
-      const next = structuredClone(prev)
+    // path estilo: 'sitio.nombre' o 'formularios.x.y'
+    save((prev) => {
+      const next = window.structuredClone ? structuredClone(prev) : JSON.parse(JSON.stringify(prev))
       const parts = path.split('.')
       let ref = next
       while (parts.length > 1) {
@@ -68,27 +89,37 @@ export default function App() {
     })
   }
 
-  const markStart = ()=> save(prev => prev.startedAt ? prev : ({ ...prev, startedAt: Date.now() }))
+  const markStart = () =>
+    save((prev) => (prev.startedAt ? prev : { ...prev, startedAt: Date.now() }))
 
-  const sectionStatus = useMemo(()=>{
+  const sectionStatus = useMemo(() => {
     const st = {}
-    const isDone = (x)=> !!x && (typeof x === 'object' ? Object.keys(x).length>0 : String(x).trim()!=='')
-    st.infoBasica = isDone(inspection.sitio?.nombre) ? 'done' : (inspection.sitio?.nombre || inspection.sitio?.coords ? 'inprogress':'pending')
+    const isDone = (x) =>
+      !!x && (typeof x === 'object' ? Object.keys(x).length > 0 : String(x).trim() !== '')
+
+    st.infoBasica = isDone(inspection.sitio?.nombre)
+      ? 'done'
+      : inspection.sitio?.nombre || inspection.sitio?.coords
+      ? 'inprogress'
+      : 'pending'
     st.vehiculo = isDone(inspection.vehiculo) ? 'inprogress' : 'pending'
     st.preventivoMG = inspection.formularios?.preventivoMG ? 'inprogress' : 'pending'
     st.sistemaTierras = inspection.formularios?.sistemaTierras ? 'inprogress' : 'pending'
     st.infraestructuraTorre = inspection.formularios?.infraestructuraTorre ? 'inprogress' : 'pending'
-    st.inventarioEquipos = inspection.formularios?.inventarioEquipos?.items?.length ? 'inprogress' : 'pending'
+    st.inventarioEquipos = inspection.formularios?.inventarioEquipos?.items?.length
+      ? 'inprogress'
+      : 'pending'
     st.mantenimientoSitio = inspection.formularios?.mantenimientoSitio ? 'inprogress' : 'pending'
     st.fotos = inspection.formularios?.evidenciaConsolidada?.fotos?.length ? 'inprogress' : 'pending'
     st.firma = inspection.firma ? 'done' : 'pending'
-    // progreso simple
+
     const total = 9
-    const done = Object.values(st).filter(v=>v==='done' || v==='inprogress').length
-    save(prev => ({ ...prev, __progress: Math.round((done/total)*100) }))
+    const done = Object.values(st).filter((v) => v === 'done' || v === 'inprogress').length
+    // almacena progreso (no rompe memo porque save setea nuevo objeto)
+    save((prev) => ({ ...prev, __progress: Math.round((done / total) * 100) }))
     return st
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[inspection])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspection])
 
   const openSection = (key) => {
     const map = {
@@ -103,51 +134,81 @@ export default function App() {
       firma: VIEWS.FIRMA,
     }
     setView(map[key] || VIEWS.MENU)
-    window.scrollTo({ top:0, behavior:'smooth' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const backToMenu = ()=> setView(VIEWS.MENU)
+  const backToMenu = () => setView(VIEWS.MENU)
 
-  if (!tech) return <Login onLogin={()=> setTech(localStorage.getItem('tecnicoCode')||'')} />
+  if (!tech) return <Login onLogin={() => setTech(localStorage.getItem('tecnicoCode') || '')} />
 
   return (
     <div className="min-h-screen bg-surface text-foreground">
-      <Header tecnico={tech} inspectionId={inspection.id} progress={inspection.__progress} onLogout={()=>{localStorage.removeItem('tecnicoCode'); setTech('')}} onHome={backToMenu} />
+      <Header
+        tecnico={tech}
+        inspectionId={inspection.id}
+        progress={inspection.__progress}
+        onLogout={() => {
+          localStorage.removeItem('tecnicoCode')
+          setTech('')
+        }}
+        onHome={backToMenu}
+      />
+
       {view === VIEWS.MENU && (
         <MenuWizard inspection={inspection} status={sectionStatus} onOpen={openSection} />
       )}
 
       {view === VIEWS.INFO && (
-        <InfoBasica inspection={inspection} setField={setField} markStart={markStart} onBack={backToMenu} />
+        <InfoBasica
+          inspection={inspection}
+          setField={setField}
+          markStart={markStart}
+          onBack={backToMenu}
+        />
       )}
+
       {view === VIEWS.VEHICULO && (
         <Vehiculo inspection={inspection} setField={setField} onBack={backToMenu} />
       )}
+
       {view === VIEWS.PREVENTIVO_MG && (
         <PreventivoMG inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.TIERRAS && (
         <SistemaTierras inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.TORRE && (
         <InfraestructuraTorre inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.INVENTARIO && (
         <InventarioEquipos inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.PMI && (
         <MantenimientoSitio inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.FOTOS && (
         <EvidenciaConsolidada inspection={inspection} save={save} onBack={backToMenu} />
       )}
+
       {view === VIEWS.FIRMA && (
-        <SignaturePad inspection={inspection} save={save} onBack={backToMenu} onComplete={()=> setView(VIEWS.COMPLETE)} />
+        <SignaturePad
+          inspection={inspection}
+          save={save}
+          onBack={backToMenu}
+          onComplete={() => setView(VIEWS.COMPLETE)}
+        />
       )}
+
       {view === VIEWS.COMPLETE && (
         <InspectionComplete inspection={inspection} onBackToMenu={backToMenu} />
       )}
 
+      {/* Botón flotante para dictado (como v1.0) */}
       <VoiceDock />
     </div>
   )
