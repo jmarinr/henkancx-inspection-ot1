@@ -14,6 +14,7 @@ import SistemaTierras from './SistemaTierras.jsx'
 import InfraestructuraTorre from './InfraestructuraTorre.jsx'
 import InventarioEquipos from './InventarioEquipos.jsx'
 import MantenimientoSitio from './MantenimientoSitio.jsx'
+import EvidenciaConsolidada from './EvidenciaConsolidada.jsx'
 
 // Firma y cierre
 import SignaturePad from './SignaturePad.jsx'
@@ -62,8 +63,6 @@ export default function App() {
       s.firma = 'done'
     }
 
-    // Los demás formularios quedan como pending por defecto; si quieres reglas
-    // específicas (p.ej., mínimo de campos/fotos) las añadimos luego.
     return s
   }, [inspection])
 
@@ -96,7 +95,12 @@ export default function App() {
 
       {/* Secciones del wizard */}
       {route === 'infoBasica' && (
-        <InfoBasica inspection={inspection} setField={setField} markStart={markStart} />
+        <InfoBasica
+          inspection={inspection}
+          setField={setField}
+          markStart={markStart}
+          onBack={() => setRoute('menu')}
+        />
       )}
 
       {route === 'vehiculo' && (
@@ -104,19 +108,42 @@ export default function App() {
       )}
 
       {route === 'sistemaTierras' && (
-        <SistemaTierras inspection={inspection} save={save} setField={setField} />
+        <SistemaTierras
+          inspection={inspection}
+          save={save}
+          onBack={() => setRoute('menu')}
+        />
       )}
 
       {route === 'infraestructuraTorre' && (
-        <InfraestructuraTorre inspection={inspection} save={save} setField={setField} />
+        <InfraestructuraTorre
+          inspection={inspection}
+          save={save}
+          onBack={() => setRoute('menu')}
+        />
       )}
 
       {route === 'inventarioEquipos' && (
-        <InventarioEquipos inspection={inspection} save={save} />
+        <InventarioEquipos
+          inspection={inspection}
+          save={save}
+        />
       )}
 
       {route === 'mantenimientoSitio' && (
-        <MantenimientoSitio inspection={inspection} save={save} />
+        <MantenimientoSitio
+          inspection={inspection}
+          save={save}
+          onBack={() => setRoute('menu')}
+        />
+      )}
+
+      {route === 'fotos' && (
+        <EvidenciaConsolidada
+          inspection={inspection}
+          save={save}
+          onBack={() => setRoute('menu')}
+        />
       )}
 
       {/* Firma y botón de cierre */}
