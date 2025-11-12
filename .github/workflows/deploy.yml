@@ -1,4 +1,5 @@
 name: Deploy
+
 on:
   push:
     branches: [main]
@@ -15,12 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Diagnóstico: imprime árbol y package.json
-      - name: Show repo tree
-        run: |
-          echo "== ROOT ==" && ls -la
-          echo "== PACKAGE.JSON ==" && cat package.json || true
-
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -29,9 +24,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build (Vite)
-        env:
-          CI: "false"   # evita que warnings rompan el build
-        run: npm run build --logLevel info
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
