@@ -1,6 +1,20 @@
-import React from 'react'
+// src/FormHost.jsx
+import React, { useState } from 'react'
 
-// Mapea clave → título amigable
+// 🧱 Tus componentes v1
+import BasicInfoForm from './BasicInfoForm.jsx'
+import EquipmentForm from './EquipmentForm.jsx'
+import MeasurementsForm from './MeasurementsForm.jsx'      // si lo usas en PMI
+import TestsForm from './TestsForm.jsx'                    // opcional, ejemplo
+import LocationMap from './LocationMap.jsx'
+import SignaturePad from './SignaturePad.jsx'
+import VoiceInput from './VoiceInput.jsx'
+import AICopilot from './AICopilot.jsx'
+import Camera from './Camera.jsx'
+import OCRConfirmModal from './OCRConfirmModal.jsx'
+import ObservationsIA from './ObservationsIA.jsx'
+
+// 🔖 títulos por clave
 const TITLES = {
   infoBasica: 'Información básica',
   vehiculo: 'Datos del vehículo',
@@ -13,47 +27,254 @@ const TITLES = {
   firma: 'Firma y cierre',
 }
 
+// 🔧 botón/acciones del pie
+function FooterActions({ onBack, onSave }) {
+  return (
+    <div className="flex items-center justify-end gap-2 pt-2">
+      <button className="btn btn-secondary" onClick={onBack}>← Volver al menú</button>
+      <button className="btn btn-primary" onClick={onSave}>Guardar y marcar como completado</button>
+    </div>
+  )
+}
+
 export default function FormHost({ formKey, inspection, onBack, onComplete }) {
   if (!formKey) return null
   const title = TITLES[formKey] || formKey
 
-  // Aquí podrías renderizar tus formularios reales:
-  // switch (formKey) {
-  //   case 'infoBasica': return <BasicInfoForm ... />
-  //   case 'inventarioEquipos': return <EquipmentForm ... />
-  //   ...
-  // }
+  // Estado local temporal de cada formulario (se inicializa con lo que tengas guardado)
+  const [local, setLocal] = useState(() => {
+    const base = inspection?.formularios?.[formKey]
+    // normaliza algunos casos
+    if (!base) return {}
+    return JSON.parse(JSON.stringify(base))
+  })
+
+  const saveAndComplete = () => {
+    onComplete(formKey, local) // el padre guarda + marca done + recalc progreso
+  }
+
+  // Helpers de asignación
+  const setField = (name, value) => {
+    setLocal(prev => ({ ...prev, [name]: value }))
+  }
+  const merge = (obj) => setLocal(prev => ({ ...prev, ...obj }))
+
+  // Render por sección
+  let content = null
+
+  switch (formKey) {
+    // 1) Información básica: usa tu BasicInfoForm y la ubicación automática
+    case 'infoBasica':
+      content = (
+        <div className="space-y-6">
+          <BasicInfoForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+          />
+
+          {/* Ubicación (auto) */}
+          <div className="card space-y-3">
+            <h3 className="font-semibold">Ubicación de la inspección</h3>
+            <LocationMap
+              value={local.geo || inspection?.geo || null}
+              onChange={(g)=> merge({ geo: g })}
+              auto // que capture sin botón
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              * La ubicación se toma automáticamente para reducir errores.
+            </p>
+          </div>
+
+          {/* Observaciones con IA + dictado */}
+          <div className="card space-y-3">
+            <h3 className="font-semibold">Observaciones</h3>
+            <ObservationsIA
+              value={local.observaciones || ''}
+              onChange={(v)=> setField('observaciones', v)}
+              onAnalyze={(ai)=> setField('observaciones', ai)} // simula IA
+            />
+            <VoiceInput
+              onTranscript={(txt)=> setField('observaciones', (local.observaciones||'') + (local.observaciones ? ' ' : '') + txt)}
+              label="Grabar Audio (30s máx)"
+            />
+          </div>
+
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 2) Datos del vehículo (si los manejas en MeasurementsForm u otro)
+    case 'vehiculo':
+      content = (
+        <div className="space-y-6">
+          <MeasurementsForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+          />
+
+          {/* OCR/IA de fotos de placas/seriales */}
+          <div className="card space-y-3">
+            <h3 className="font-semibold">Fotos con OCR (simulado)</h3>
+            <Camera
+              photos={local.fotos || []}
+              setPhotos={(arr)=> setField('fotos', arr)}
+              onAnalyze={(result)=> merge({ campos: { ...(local.campos||{}), ...result } })} // simula IA
+            />
+            <OCRConfirmModal />
+          </div>
+
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 3) Preventivo MG y baterías
+    case 'preventivoMG':
+      content = (
+        <div className="space-y-6">
+          <TestsForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+            title="Checklist Preventivo MG y baterías"
+          />
+          <Camera
+            photos={local.fotos || []}
+            setPhotos={(arr)=> setField('fotos', arr)}
+            onAnalyze={(result)=> merge({ campos: { ...(local.campos||{}), ...result } })}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 4) Sistema de tierras
+    case 'sistemaTierras':
+      content = (
+        <div className="space-y-6">
+          <MeasurementsForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+            title="Medición del sistema de tierras"
+          />
+          <Camera
+            photos={local.fotos || []}
+            setPhotos={(arr)=> setField('fotos', arr)}
+            onAnalyze={(result)=> merge({ campos: { ...(local.campos||{}), ...result } })}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 5) Infraestructura de torre
+    case 'infraestructuraTorre':
+      content = (
+        <div className="space-y-6">
+          <MeasurementsForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+            title="Infraestructura de torre (El Valle)"
+          />
+          <Camera
+            photos={local.fotos || []}
+            setPhotos={(arr)=> setField('fotos', arr)}
+            onAnalyze={(result)=> merge({ campos: { ...(local.campos||{}), ...result } })}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 6) Inventario de equipos
+    case 'inventarioEquipos':
+      content = (
+        <div className="space-y-6">
+          <EquipmentForm
+            items={local.lista || []}
+            setItems={(lista)=> setField('lista', lista)}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 7) PMI general
+    case 'mantenimientoSitio':
+      content = (
+        <div className="space-y-6">
+          <MeasurementsForm
+            data={local.campos || {}}
+            setData={(d)=> setLocal(prev => ({ ...prev, campos: d }))}
+            title="Mantenimiento general del sitio (PMI)"
+          />
+          <Camera
+            photos={local.fotos || []}
+            setPhotos={(arr)=> setField('fotos', arr)}
+            onAnalyze={(result)=> merge({ campos: { ...(local.campos||{}), ...result } })}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 8) Evidencia consolidada
+    case 'fotos':
+      content = (
+        <div className="space-y-6">
+          <div className="card space-y-3">
+            <h3 className="font-semibold">Evidencia fotográfica con OCR (simulado)</h3>
+            <Camera
+              photos={local.items || []}
+              setPhotos={(arr)=> setField('items', arr)}
+              onAnalyze={(result)=> merge({ extraidos: { ...(local.extraidos||{}), ...result } })}
+            />
+            <OCRConfirmModal />
+          </div>
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    // 9) Firma y cierre
+    case 'firma':
+      content = (
+        <div className="space-y-6">
+          <SignaturePad
+            value={local.trazo || null}
+            onChange={(sig)=> setField('trazo', sig)}
+            nombreCliente={local.nombreCliente || ''}
+            onNombreChange={(v)=> setField('nombreCliente', v)}
+          />
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+      break
+
+    default:
+      content = (
+        <div className="card">
+          <p>No hay un formulario asignado a <code>{formKey}</code>. (Placeholder)</p>
+          <FooterActions onBack={onBack} onSave={saveAndComplete} />
+        </div>
+      )
+  }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="container mx-auto px-4 py-6 space-y-4">
+      {/* Cabecera del formulario */}
+      <div className="flex items-center justify-between">
         <button className="btn btn-secondary" onClick={onBack}>← Volver al menú</button>
         <div className="text-sm text-gray-500 dark:text-gray-400">Inspección #{inspection?.id}</div>
       </div>
 
-      <div className="card space-y-4">
-        <h2 className="text-xl font-bold">{title}</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          (Vista genérica) Completa los datos de <strong>{title}</strong>. Cuando termines, guarda para marcar esta
-          sección como <em>completada</em> y volver al menú.
-        </p>
-
-        {/* Espacio de trabajo temporal / placeholder */}
-        <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-sm text-gray-500 dark:text-gray-400">
-          Aquí irá el formulario específico de <strong>{title}</strong>.
-          <br/>Puedes reemplazar este contenedor por tu componente real cuando lo tengas.
-        </div>
-
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button className="btn btn-secondary" onClick={onBack}>Cancelar</button>
-          <button
-            className="btn btn-primary"
-            onClick={() => onComplete(formKey, { updatedAt: new Date().toISOString() })}
-          >
-            Guardar y marcar como completado
-          </button>
-        </div>
+      {/* Copiloto IA opcional arriba a la derecha */}
+      <div className="flex justify-end">
+        <AICopilot />
       </div>
+
+      {/* Contenido */}
+      {content}
     </div>
   )
 }
