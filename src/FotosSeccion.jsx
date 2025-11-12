@@ -1,54 +1,83 @@
-
-import React, { Suspense } from 'react'
-const ObservationsIA = React.lazy(() => import('./ObservationsIA.jsx'))
-const OCRConfirmModal = React.lazy(() => import('./OCRConfirmModal.jsx'))
+import React, { useRef } from 'react'
+import ObservationsIA from './ObservationsIA.jsx'
+import OCRConfirmModal from './OCRConfirmModal.jsx'
 import Camera from './Camera.jsx'
 
-export default function FotosSeccion({ seccionKey, photos, setPhotos, onOCRData }) {
-  const addPhoto = (imgDataUrl, title='') => {
-    const item = { dataUrl: imgDataUrl, title: title || 'Foto sin título' }
-    setPhotos([...(photos||[]), item])
+export default function FotosSeccion({ seccionKey, photos=[], setPhotos, onOCRData }) {
+  const inputRef = useRef(null)
+
+  const addPhotoFile = async (file) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result
+      setPhotos([...(photos||[]), { dataUrl, title: '' }])
+    }
+    reader.readAsDataURL(file)
   }
-  const removePhoto = (i) => {
-    const arr = (photos||[]).slice(); arr.splice(i,1); setPhotos(arr)
+
+  const handleUpload = (e) => {
+    const f = e.target.files?.[0]
+    if (f) addPhotoFile(f)
   }
+
+  const onAddFromCamera = (img) => {
+    setPhotos([...(photos||[]), { dataUrl: img, title: '' }])
+  }
+
   const updateTitle = (i, v) => {
-    const arr = (photos||[]).slice(); arr[i] = { ...(arr[i]||{}), title: v }; setPhotos(arr)
+    const arr = photos.slice()
+    arr[i] = { ...arr[i], title: v }
+    setPhotos(arr)
+  }
+
+  const remove = (i) => {
+    const arr = photos.slice()
+    arr.splice(i,1)
+    setPhotos(arr)
   }
 
   return (
-    <div className="space-y-4">
-      <div className="card">
-        <h4 className="font-semibold mb-2">Fotos de la sección</h4>
-        <Camera
-          photos={(photos||[]).map(p => p.dataUrl || p)}
-          onAddPhoto={(img)=>addPhoto(img)}
-          onRemovePhoto={removePhoto}
-        />
-        <div className="mt-3 space-y-3">
-          {(photos||[]).map((p, idx)=>(
-            <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3 border rounded-lg p-3">
-              <div className="md:col-span-1">
-                <img src={p.dataUrl || p} alt={`foto-${idx}`} className="w-full h-40 object-contain rounded-md border" />
-              </div>
-              <div className="md:col-span-2 space-y-2">
+    <div className="card">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="font-medium">Evidencia fotográfica</div>
+        <div className="flex gap-2">
+          <button className="btn btn-secondary" onClick={()=> inputRef.current?.click()}>Subir + OCR</button>
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        </div>
+      </div>
+
+      <Camera
+        photos={(photos||[]).map(p=> p.dataUrl || p)}
+        onAddPhoto={onAddFromCamera}
+        onRemovePhoto={remove}
+      />
+
+      {(photos||[]).length > 0 && (
+        <div className="mt-4 space-y-4">
+          {(photos||[]).map((p, i) => (
+            <div key={i} className="rounded-lg border border-gray-700 p-3 bg-gray-900/40">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Título</label>
-                  <input className="input-field" value={p.title || ''} onChange={e=>updateTitle(idx, e.target.value)} placeholder="Ej. Foto tablero completo generador" />
+                  <img src={p.dataUrl || p} alt={`Foto ${i+1}`} className="w-full rounded-md border border-gray-700" />
                 </div>
-                <Suspense fallback={<div className="text-sm text-gray-500">Analizando IA…</div>}>
-                  <ObservationsIA image={p.dataUrl || p} onExtract={(data)=> onOCRData && onOCRData(data)} />
-                  <OCRConfirmModal image={p.dataUrl || p} onConfirm={(data)=> onOCRData && onOCRData(data)} />
-                </Suspense>
-                <div className="flex justify-end">
-                  <button className="btn btn-secondary" onClick={()=>removePhoto(idx)}>Eliminar</button>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium">Título de la foto</label>
+                  <input className="input-field" value={p.title||''} onChange={(e)=> updateTitle(i, e.target.value)} placeholder="Ej. Tablero del generador" />
+
+                  <div className="space-y-2">
+                    <ObservationsIA image={p.dataUrl||p} onExtract={(d)=> onOCRData && onOCRData(d)} />
+                    <OCRConfirmModal image={p.dataUrl||p} onConfirm={(d)=> onOCRData && onOCRData(d)} />
+                  </div>
+
+                  <div className="pt-2">
+                    <button className="btn btn-secondary" onClick={()=> remove(i)}>Eliminar foto</button>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">Sugerencia: incluye al menos 3 fotos por sección (no son obligatorias).</p>
-      </div>
+      )}
     </div>
   )
 }
