@@ -1,5 +1,4 @@
-
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Header from './Header.jsx'
 import Login from './Login.jsx'
 import MenuWizard from './MenuWizard.jsx'
@@ -10,84 +9,145 @@ import InfraestructuraTorre from './InfraestructuraTorre.jsx'
 import InventarioEquipos from './InventarioEquipos.jsx'
 import MantenimientoSitio from './MantenimientoSitio.jsx'
 import EvidenciaConsolidada from './EvidenciaConsolidada.jsx'
+import PreventivoMG from './PreventivoMG.jsx'
 import SignaturePad from './SignaturePad.jsx'
 import InspectionComplete from './InspectionComplete.jsx'
 import VoiceDock from './VoiceDock.jsx'
-import { useInspectionState } from './state/inspectionState.js'
-import { downloadPDF } from './pdf.js'
+
+const VIEWS = {
+  MENU: 'menu',
+  INFO: 'infoBasica',
+  VEHICULO: 'vehiculo',
+  TIERRAS: 'sistemaTierras',
+  TORRE: 'infraestructuraTorre',
+  INVENTARIO: 'inventarioEquipos',
+  PMI: 'mantenimientoSitio',
+  FOTOS: 'fotos',
+  PREVENTIVO_MG: 'preventivoMG',
+  FIRMA: 'firma',
+  COMPLETE: 'complete',
+}
+
+const emptyInspection = (id='TEMP') => ({
+  id,
+  startedAt: null,
+  finishedAt: null,
+  proveedor: '',
+  ot: '',
+  sitio: { nombre:'', idSitio:'', fechaProgramada:'', coords:null },
+  vehiculo: {},
+  formularios: {},
+  __progress: 0,
+})
 
 export default function App() {
-  const [route, setRoute] = useState('menu')
-  const [logged, setLogged] = useState(!!localStorage.getItem('tecnicoCode'))
-  const { inspection, save, setField, markStart, markEnd } = useInspectionState()
+  const [tech, setTech] = useState(localStorage.getItem('tecnicoCode') || '')
+  const [view, setView] = useState(VIEWS.MENU)
+  const [inspection, setInspection] = useState(()=>{
+    const raw = localStorage.getItem('activeInspection')
+    return raw ? JSON.parse(raw) : emptyInspection(String(Date.now()))
+  })
 
-  const status = useMemo(() => {
-    const s = {
-      infoBasica: 'inprogress',
-      vehiculo: 'pending',
-      preventivoMG: 'pending',
-      sistemaTierras: 'pending',
-      infraestructuraTorre: 'pending',
-      inventarioEquipos: 'pending',
-      mantenimientoSitio: 'pending',
-      fotos: 'pending',
-      firma: 'pending'
+  // Persistencia
+  useEffect(()=>{ localStorage.setItem('activeInspection', JSON.stringify(inspection)) },[inspection])
+
+  const save = (updater) => setInspection(prev => (typeof updater === 'function' ? updater(prev) : updater))
+  const setField = (path, value) => {
+    // path style: 'sitio.nombre' or 'formularios.x.y'
+    save(prev => {
+      const next = structuredClone(prev)
+      const parts = path.split('.')
+      let ref = next
+      while (parts.length > 1) {
+        const k = parts.shift()
+        ref[k] = ref[k] ?? {}
+        ref = ref[k]
+      }
+      ref[parts[0]] = value
+      return next
+    })
+  }
+
+  const markStart = ()=> save(prev => prev.startedAt ? prev : ({ ...prev, startedAt: Date.now() }))
+
+  const sectionStatus = useMemo(()=>{
+    const st = {}
+    const isDone = (x)=> !!x && (typeof x === 'object' ? Object.keys(x).length>0 : String(x).trim()!=='')
+    st.infoBasica = isDone(inspection.sitio?.nombre) ? 'done' : (inspection.sitio?.nombre || inspection.sitio?.coords ? 'inprogress':'pending')
+    st.vehiculo = isDone(inspection.vehiculo) ? 'inprogress' : 'pending'
+    st.preventivoMG = inspection.formularios?.preventivoMG ? 'inprogress' : 'pending'
+    st.sistemaTierras = inspection.formularios?.sistemaTierras ? 'inprogress' : 'pending'
+    st.infraestructuraTorre = inspection.formularios?.infraestructuraTorre ? 'inprogress' : 'pending'
+    st.inventarioEquipos = inspection.formularios?.inventarioEquipos?.items?.length ? 'inprogress' : 'pending'
+    st.mantenimientoSitio = inspection.formularios?.mantenimientoSitio ? 'inprogress' : 'pending'
+    st.fotos = inspection.formularios?.evidenciaConsolidada?.fotos?.length ? 'inprogress' : 'pending'
+    st.firma = inspection.firma ? 'done' : 'pending'
+    // progreso simple
+    const total = 9
+    const done = Object.values(st).filter(v=>v==='done' || v==='inprogress').length
+    save(prev => ({ ...prev, __progress: Math.round((done/total)*100) }))
+    return st
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[inspection])
+
+  const openSection = (key) => {
+    const map = {
+      infoBasica: VIEWS.INFO,
+      vehiculo: VIEWS.VEHICULO,
+      preventivoMG: VIEWS.PREVENTIVO_MG,
+      sistemaTierras: VIEWS.TIERRAS,
+      infraestructuraTorre: VIEWS.TORRE,
+      inventarioEquipos: VIEWS.INVENTARIO,
+      mantenimientoSitio: VIEWS.PMI,
+      fotos: VIEWS.FOTOS,
+      firma: VIEWS.FIRMA,
     }
-    if (inspection?.sitio?.nombre && inspection?.sitio?.idSitio && inspection?.sitio?.coords) s.infoBasica = 'done'
-    if (inspection?.vehiculo && Object.keys(inspection.vehiculo).length > 0) s.vehiculo = 'inprogress'
-    if (inspection?.firma?.imagenDataUrl && inspection?.firma?.nombreCliente) s.firma = 'done'
-    return s
-  }, [inspection])
+    setView(map[key] || VIEWS.MENU)
+    window.scrollTo({ top:0, behavior:'smooth' })
+  }
 
-  const open = (key) => setRoute(key)
-  const logout = () => { localStorage.removeItem('tecnicoCode'); setLogged(false); setRoute('menu') }
-  const finalizeAndDownload = () => { markEnd(); downloadPDF(inspection); setRoute('complete') }
+  const backToMenu = ()=> setView(VIEWS.MENU)
 
-  if (!logged) return <Login onLogin={() => setLogged(true)} />
+  if (!tech) return <Login onLogin={()=> setTech(localStorage.getItem('tecnicoCode')||'')} />
 
   return (
-    <div className="min-h-screen">
-      <Header onLogout={logout} />
-      {route === 'menu' && <MenuWizard onOpen={open} status={status} />}
+    <div className="min-h-screen bg-surface text-foreground">
+      <Header tecnico={tech} inspectionId={inspection.id} progress={inspection.__progress} onLogout={()=>{localStorage.removeItem('tecnicoCode'); setTech('')}} onHome={backToMenu} />
+      {view === VIEWS.MENU && (
+        <MenuWizard inspection={inspection} status={sectionStatus} onOpen={openSection} />
+      )}
 
-      {route === 'infoBasica' && (
-        <InfoBasica inspection={inspection} setField={setField} markStart={markStart} onBack={()=>setRoute('menu')} />
+      {view === VIEWS.INFO && (
+        <InfoBasica inspection={inspection} setField={setField} markStart={markStart} onBack={backToMenu} />
       )}
-      {route === 'vehiculo' && (
-        <Vehiculo inspection={inspection} setField={setField} />
+      {view === VIEWS.VEHICULO && (
+        <Vehiculo inspection={inspection} setField={setField} onBack={backToMenu} />
       )}
-      {route === 'sistemaTierras' && (
-        <SistemaTierras inspection={inspection} save={save} onBack={()=>setRoute('menu')} />
+      {view === VIEWS.PREVENTIVO_MG && (
+        <PreventivoMG inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'infraestructuraTorre' && (
-        <InfraestructuraTorre inspection={inspection} save={save} onBack={()=>setRoute('menu')} />
+      {view === VIEWS.TIERRAS && (
+        <SistemaTierras inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'inventarioEquipos' && (
-        <InventarioEquipos inspection={inspection} save={save} />
+      {view === VIEWS.TORRE && (
+        <InfraestructuraTorre inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'mantenimientoSitio' && (
-        <MantenimientoSitio inspection={inspection} save={save} onBack={()=>setRoute('menu')} />
+      {view === VIEWS.INVENTARIO && (
+        <InventarioEquipos inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'fotos' && (
-        <EvidenciaConsolidada inspection={inspection} save={save} onBack={()=>setRoute('menu')} />
+      {view === VIEWS.PMI && (
+        <MantenimientoSitio inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'firma' && (
-        <div className="container px-4 py-6 space-y-4">
-          <SignaturePad
-            firma={inspection?.firma?.imagenDataUrl}
-            setFirma={(v) => setField('firma.imagenDataUrl', v)}
-            nombreCliente={inspection?.firma?.nombreCliente}
-            setNombreCliente={(v) => setField('firma.nombreCliente', v)}
-          />
-          <div className="flex gap-2 justify-end">
-            <button className="btn btn-secondary" onClick={() => setRoute('menu')}>Volver</button>
-            <button className="btn btn-primary" onClick={finalizeAndDownload}>Finalizar e imprimir PDF</button>
-          </div>
-        </div>
+      {view === VIEWS.FOTOS && (
+        <EvidenciaConsolidada inspection={inspection} save={save} onBack={backToMenu} />
       )}
-      {route === 'complete' && (
-        <InspectionComplete inspection={inspection} onBack={()=>setRoute('menu')} onFinish={()=>setRoute('menu')} />
+      {view === VIEWS.FIRMA && (
+        <SignaturePad inspection={inspection} save={save} onBack={backToMenu} onComplete={()=> setView(VIEWS.COMPLETE)} />
       )}
+      {view === VIEWS.COMPLETE && (
+        <InspectionComplete inspection={inspection} onBackToMenu={backToMenu} />
+      )}
+
       <VoiceDock />
     </div>
   )
