@@ -4,6 +4,8 @@ import SignaturePad from './SignaturePad.jsx'
 import VoiceInput from './VoiceInput.jsx'
 import ObservationsIA from './ObservationsIA.jsx'
 import OCRConfirmModal from './OCRConfirmModal.jsx'
+import VoiceInput from './VoiceInput.jsx'
+
 
 // --- utilidades y etiquetas ---
 const TITLES = {
