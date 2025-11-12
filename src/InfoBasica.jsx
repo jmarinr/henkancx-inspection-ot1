@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react'
 import SectionLayout from './SectionLayout'
 
@@ -6,7 +7,6 @@ export default function InfoBasica({ inspection, setField, markStart, onBack }) 
 
   useEffect(() => {
     if (!inspection.timestamps?.inicio) markStart()
-    // Captura GPS automática
     let watchId
     if (navigator.geolocation) {
       watchId = navigator.geolocation.watchPosition(
@@ -27,7 +27,7 @@ export default function InfoBasica({ inspection, setField, markStart, onBack }) 
   const i = inspection
   const c = i.sitio.coords
 
-  const content = (
+  const form = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>
         <label className="block text-sm font-medium mb-1">Nombre del Sitio</label>
@@ -65,15 +65,11 @@ export default function InfoBasica({ inspection, setField, markStart, onBack }) 
       </div>
       {!window.isSecureContext && (
         <div className="md:col-span-2 text-yellow-400 text-sm">
-          * Nota: La geolocalización requiere HTTPS. Activa “Enforce HTTPS” en GitHub Pages para tu dominio personalizado.
+          * Nota: La geolocalización requiere HTTPS. Activa “Enforce HTTPS” en GitHub Pages para tu dominio.
         </div>
       )}
     </div>
   )
 
-  return (
-    <SectionLayout title="Información básica" onBack={onBack} onNext={onBack}>
-      {content}
-    </SectionLayout>
-  )
+  return <SectionLayout title="Información básica" onBack={onBack} onNext={onBack}>{form}</SectionLayout>
 }
