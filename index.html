@@ -6,9 +6,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Usamos la misma estrategia de v1.0: script de Google Maps cargado en index -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8"></script>
+
+    <!-- Favicon para evitar 404 -->
+    <link rel="icon" href="/favicon.ico" />
+
     <title>HenkanCX Synk - MVP</title>
+
+    <!-- Google Maps con async/defer para evitar warning -->
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8"
+      async defer
+    ></script>
   </head>
   <body>
     <div id="root"></div>
