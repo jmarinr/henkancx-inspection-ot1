@@ -1,5 +1,4 @@
 name: Deploy
-
 on:
   push:
     branches: [main]
@@ -16,53 +15,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Diagnóstico: imprime árbol de archivos
+      # Diagnóstico: imprime árbol y package.json
       - name: Show repo tree
         run: |
-          echo "== ROOT =="
-          ls -la
-          echo "== FIND package.json (maxdepth 3) =="
-          find . -maxdepth 3 -name "package.json" -print
-
-      # Ubica dónde está package.json (raíz o subcarpeta) y exporta la ruta
-      - id: findpkg
-        name: Locate project root
-        run: |
-          set -e
-          FILE=$(find . -maxdepth 3 -name package.json | head -n 1 || true)
-          if [ -z "$FILE" ]; then
-            echo "❌ No se encontró package.json en el repo"; exit 1
-          fi
-          WD=$(dirname "$FILE")
-          echo "workdir=$WD" >> $GITHUB_OUTPUT
-          echo "📁 Proyecto en: $WD"
-          echo "== LIST $WD =="
-          ls -la "$WD"
+          echo "== ROOT ==" && ls -la
+          echo "== PACKAGE.JSON ==" && cat package.json || true
 
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Use npm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Install deps
+        run: npm install --no-audit --no-fund
 
-      - name: Install
-        working-directory: ${{ steps.findpkg.outputs.workdir }}
-        run: npm install
-
-      - name: Build
-        working-directory: ${{ steps.findpkg.outputs.workdir }}
-        run: npm run build
+      - name: Build (Vite)
+        env:
+          CI: "false"   # evita que warnings rompan el build
+        run: npm run build --logLevel info
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.findpkg.outputs.workdir }}/dist
+          path: ./dist
 
   deploy:
     environment:
