@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import schema from '../schemas/inventario_equipos.json'
-import FotosSeccion from '../FotosSeccion'
+import schema from './schemas/inventario_equipos.json'
+import FotosSeccion from './FotosSeccion'
 
 export default function InventarioEquipos({ inspection, save }) {
   const [items, setItems] = useState(inspection.formularios.inventarioEquipos.items || [])
   const [photos, setPhotos] = useState(inspection.formularios.inventarioEquipos.fotos || [])
 
-  useEffect(()=>{
-    save(prev=> ({ ...prev, formularios: { ...prev.formularios, inventarioEquipos: { items, fotos: photos } } }))
+  useEffect(() => {
+    save(prev => ({
+      ...prev,
+      formularios: { ...prev.formularios, inventarioEquipos: { items, fotos: photos } }
+    }))
   }, [items, photos, save])
 
   const add = () => setItems([...items, { equipo:'', marca:'', modelo:'', serie:'', ubicacion:'', estado:'' }])
