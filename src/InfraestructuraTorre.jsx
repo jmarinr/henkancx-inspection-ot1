@@ -1,4 +1,4 @@
-vimport React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import SectionLayout from './SectionLayout'
 import GenericForm from './GenericForm'
 import schema from './schemas/infraestructura_torre.json'
