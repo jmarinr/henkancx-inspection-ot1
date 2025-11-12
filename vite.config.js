@@ -1,13 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// ✅ Configuración correcta para build y GitHub Pages
 export default defineConfig({
   plugins: [react()],
-  root: '.',               // asegúrate que el index.html está en la raíz
+  root: '.',
+  base: './',
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: true,      // <<<<<< añade esto
   },
-  base: './'               // ruta relativa para GitHub Pages
 })
