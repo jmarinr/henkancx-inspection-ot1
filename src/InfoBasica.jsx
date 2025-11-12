@@ -1,75 +1,112 @@
-
 import React, { useEffect, useState } from 'react'
-import SectionLayout from './SectionLayout'
+import SectionLayout from './SectionLayout.jsx'
+import LocationMap from './LocationMap.jsx'
+import VoiceButton from './VoiceButton.jsx'
 
 export default function InfoBasica({ inspection, setField, markStart, onBack }) {
-  const [geoError, setGeoError] = useState(null)
+  const sitio = inspection?.sitio || {}
+  const [local, setLocal] = useState({
+    nombre: sitio.nombre || '',
+    idSitio: sitio.idSitio || '',
+    fechaProgramada: sitio.fechaProgramada || '',
+    coords: sitio.coords || null,
+    proveedor: inspection?.proveedor || '',
+    ot: inspection?.ot || '',
+    ingeniero: inspection?.ingeniero || '',
+  })
 
   useEffect(() => {
-    if (!inspection.timestamps?.inicio) markStart()
-    let watchId
+    markStart && markStart()
+    // Coordenadas automáticas
     if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        pos => {
+      const watch = navigator.geolocation.watchPosition(
+        (pos) => {
           const { latitude, longitude, accuracy } = pos.coords
-          setField('sitio.coords', { latitude, longitude, accuracy, takenAt: Date.now() })
+          const coords = { latitude, longitude, accuracy, takenAt: Date.now() }
+          setLocal(v => ({ ...v, coords }))
         },
-        err => setGeoError(err?.message || 'Error de geolocalización'),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+        () => {}, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
       )
-    } else {
-      setGeoError('Geolocalización no soportada en este navegador.')
+      return () => navigator.geolocation && navigator.geolocation.clearWatch(watch)
     }
-    return () => { if (navigator.geolocation && watchId) navigator.geolocation.clearWatch(watchId) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [markStart])
 
-  const i = inspection
-  const c = i.sitio.coords
+  // Guardado continuo
+  useEffect(() => {
+    setField('sitio.nombre', local.nombre)
+    setField('sitio.idSitio', local.idSitio)
+    setField('sitio.fechaProgramada', local.fechaProgramada)
+    setField('sitio.coords', local.coords)
+    setField('proveedor', local.proveedor)
+    setField('ot', local.ot)
+    setField('ingeniero', local.ingeniero)
+  }, [local, setField])
 
-  const form = (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div>
-        <label className="block text-sm font-medium mb-1">Nombre del Sitio</label>
-        <input className="input-field" value={i.sitio.nombre||''} onChange={e=>setField('sitio.nombre', e.target.value)} />
+  const Field = ({ label, value, onChange, placeholder='',
+                   childrenRight=null }) => (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium">{label}</label>
+      <div className="flex gap-2">
+        <input className="input-field flex-1" value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} />
+        {childrenRight}
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Número ID del Sitio</label>
-        <input className="input-field" value={i.sitio.idSitio||''} onChange={e=>setField('sitio.idSitio', e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Fecha Programada</label>
-        <input type="date" className="input-field" value={i.sitio.fechaProgramada||''} onChange={e=>setField('sitio.fechaProgramada', e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Fecha y Hora Ejecutada (auto)</label>
-        <input className="input-field bg-gray-100 dark:bg-gray-700 cursor-not-allowed" value={new Date(i.timestamps.inicio).toLocaleString()} disabled />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Ingeniero responsable</label>
-        <input className="input-field" value={i.sitio.ingeniero||''} onChange={e=>setField('sitio.ingeniero', e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Proveedor o Empresa</label>
-        <input className="input-field" value={i.proveedor||''} onChange={e=>setField('proveedor', e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1"># Orden de Trabajo (OT)</label>
-        <input className="input-field" value={i.ot||''} onChange={e=>setField('ot', e.target.value)} />
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Coordenadas tomadas en sitio (auto)</label>
-        <input className="input-field bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
-               value={c?`${c.latitude?.toFixed(6)}, ${c.longitude?.toFixed(6)} (±${Math.round(c.accuracy||0)}m)`:(geoError ? `No disponible: ${geoError}` : 'Capturando…')}
-               disabled />
-      </div>
-      {!window.isSecureContext && (
-        <div className="md:col-span-2 text-yellow-400 text-sm">
-          * Nota: La geolocalización requiere HTTPS. Activa “Enforce HTTPS” en GitHub Pages para tu dominio.
-        </div>
-      )}
     </div>
   )
 
-  return <SectionLayout title="Información básica" onBack={onBack} onNext={onBack}>{form}</SectionLayout>
+  return (
+    <SectionLayout
+      title="Información básica"
+      onBack={onBack}
+      onNext={onBack}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label="Nombre del sitio"
+               value={local.nombre}
+               onChange={v=>setLocal(s=>({ ...s, nombre: v }))}
+               placeholder="Ej. Planta Santa Rosa"
+               childrenRight={<VoiceButton onText={(t)=>setLocal(s=>({ ...s, nombre: (s.nombre||'') + ' ' + t }))} />}
+        />
+        <Field label="Número ID del sitio"
+               value={local.idSitio}
+               onChange={v=>setLocal(s=>({ ...s, idSitio: v }))}
+               placeholder="Ej. SIT-00123"
+               childrenRight={<VoiceButton onText={(t)=>setLocal(s=>({ ...s, idSitio: (s.idSitio||'') + t.replace(/\\s/g,'') }))} />}
+        />
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">Fecha programada</label>
+          <input type="date" className="input-field" value={local.fechaProgramada || ''} onChange={e=>setLocal(s=>({ ...s, fechaProgramada: e.target.value }))} />
+        </div>
+
+        <Field label="# Orden de trabajo (OT)"
+               value={local.ot}
+               onChange={v=>setLocal(s=>({ ...s, ot: v }))}
+               placeholder="Ej. OT-55678" />
+
+        <Field label="Proveedor / Empresa"
+               value={local.proveedor}
+               onChange={v=>setLocal(s=>({ ...s, proveedor: v }))}
+               placeholder="Nombre del proveedor" />
+
+        <Field label="Ingeniero responsable"
+               value={local.ingeniero}
+               onChange={v=>setLocal(s=>({ ...s, ingeniero: v }))}
+               placeholder="Nombre del ingeniero" />
+      </div>
+
+      <div className="card">
+        <div className="mb-2 font-medium">Ubicación de la inspección</div>
+        {local.coords ? (
+          <>
+            <LocationMap lat={local.coords.latitude} lng={local.coords.longitude} />
+            <div className="text-xs text-gray-500 mt-2">
+              GPS: {local.coords.latitude?.toFixed(6)}, {local.coords.longitude?.toFixed(6)} · {Math.round(local.coords.accuracy||0)} m · {new Date(local.coords.takenAt).toLocaleTimeString()}
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-gray-500">Obteniendo ubicación… (necesita HTTPS)</div>
+        )}
+      </div>
+    </SectionLayout>
+  )
 }
