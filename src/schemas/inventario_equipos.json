@@ -1,0 +1,40 @@
+{
+  "title": "Inventario de equipos",
+  "fields": [
+    {
+      "name": "equipo",
+      "label": "Equipo",
+      "type": "text"
+    },
+    {
+      "name": "marca",
+      "label": "Marca",
+      "type": "text"
+    },
+    {
+      "name": "modelo",
+      "label": "Modelo",
+      "type": "text"
+    },
+    {
+      "name": "serie",
+      "label": "N° de Serie",
+      "type": "text"
+    },
+    {
+      "name": "ubicacion",
+      "label": "Ubicación",
+      "type": "text"
+    },
+    {
+      "name": "estado",
+      "label": "Estado",
+      "type": "select",
+      "options": [
+        "Operativo",
+        "Fuera de servicio",
+        "Mantenimiento"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "title": "Medición de sistema de tierras (Ground – El Valle)",
+  "fields": [
+    {
+      "name": "metodo",
+      "label": "Método de medición",
+      "type": "text"
+    },
+    {
+      "name": "equipo",
+      "label": "Equipo utilizado",
+      "type": "text"
+    },
+    {
+      "name": "punto1_ohm",
+      "label": "Punto 1 (Ω)",
+      "type": "number"
+    },
+    {
+      "name": "punto2_ohm",
+      "label": "Punto 2 (Ω)",
+      "type": "number"
+    },
+    {
+      "name": "punto3_ohm",
+      "label": "Punto 3 (Ω)",
+      "type": "number"
+    },
+    {
+      "name": "condiciones",
+      "label": "Condiciones de medición",
+      "type": "text"
+    },
+    {
+      "name": "ubicacion",
+      "label": "Ubicación de electrodos",
+      "type": "text"
+    },
+    {
+      "name": "estado",
+      "label": "Estado (OK / No OK)",
+      "type": "text"
+    },
+    {
+      "name": "observaciones",
+      "label": "Observaciones",
+      "type": "textarea"
+    }
+  ]
+}

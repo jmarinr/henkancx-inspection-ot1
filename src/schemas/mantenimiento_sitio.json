@@ -1,0 +1,69 @@
+{
+  "title": "Mantenimiento general del sitio (PMI)",
+  "fields": [
+    {
+      "name": "sala_generador",
+      "label": "Sala generador",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "ventilacion",
+      "label": "Ventilación",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "limpieza",
+      "label": "Limpieza",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "cableado",
+      "label": "Cableado",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "extintores",
+      "label": "Extintores",
+      "type": "select",
+      "options": [
+        "Ok",
+        "Vencidos",
+        "Faltantes"
+      ]
+    },
+    {
+      "name": "iluminacion",
+      "label": "Iluminación",
+      "type": "select",
+      "options": [
+        "Ok",
+        "No"
+      ]
+    },
+    {
+      "name": "observaciones",
+      "label": "Observaciones",
+      "type": "textarea"
+    }
+  ]
+}

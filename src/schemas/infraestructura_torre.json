@@ -1,0 +1,67 @@
+{
+  "title": "Infraestructura de torre (El Valle)",
+  "fields": [
+    {
+      "name": "cimentacion",
+      "label": "Cimentación",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "pernos",
+      "label": "Pernos",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Regular",
+        "Mal"
+      ]
+    },
+    {
+      "name": "corrosion",
+      "label": "Corrosión",
+      "type": "select",
+      "options": [
+        "No",
+        "Leve",
+        "Alta"
+      ]
+    },
+    {
+      "name": "senializacion",
+      "label": "Señalización",
+      "type": "select",
+      "options": [
+        "Bien",
+        "Faltante"
+      ]
+    },
+    {
+      "name": "iluminacion",
+      "label": "Iluminación",
+      "type": "select",
+      "options": [
+        "Operativa",
+        "No operativa"
+      ]
+    },
+    {
+      "name": "accesos",
+      "label": "Accesos",
+      "type": "select",
+      "options": [
+        "Libre",
+        "Restringido"
+      ]
+    },
+    {
+      "name": "observaciones",
+      "label": "Observaciones",
+      "type": "textarea"
+    }
+  ]
+}
