@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 
 export function useInspectionState() {
   const [inspection, setInspection] = useState(() => {
@@ -7,8 +7,9 @@ export function useInspectionState() {
       id: 'INS-' + Date.now(),
       timestamps: {},
       tecnico: { code: localStorage.getItem('tecnicoCode') || '' },
-      sitio: { coords: null },
-      proveedor: '', ot: '',
+      sitio: { coords: null, nombre: '', idSitio: '', fechaProgramada: '', ingeniero: '' },
+      proveedor: '',
+      ot: '',                // ← OT explícito
       vehiculo: {},
       formularios: {
         preventivoMG: { campos: {}, fotos: [] },
@@ -16,6 +17,7 @@ export function useInspectionState() {
         infraestructuraTorre: { campos: {}, fotos: [] },
         inventarioEquipos: { items: [], fotos: [] },
         mantenimientoSitio: { campos: {}, fotos: [] },
+        evidenciaConsolidada: { fotos: [] }   // ← NUEVO
       },
       firma: { imagenDataUrl: null, nombreCliente: '' }
     }
@@ -32,14 +34,14 @@ export function useInspectionState() {
     save(prev => {
       const copy = structuredClone(prev)
       let ref = copy
-      for (let i=0;i<parts.length-1;i++) ref = ref[parts[i]]
-      ref[parts[parts.length-1]] = value
+      for (let i = 0; i < parts.length - 1; i++) ref = ref[parts[i]]
+      ref[parts[parts.length - 1]] = value
       return copy
     })
   }
 
   const markStart = () => {
-    save(prev => ({ ...prev, timestamps: { ...prev.timestamps, inicio: Date.now() }, sitio: { ...prev.sitio, fechaEjecutadaLocked: true } }))
+    save(prev => ({ ...prev, timestamps: { ...prev.timestamps, inicio: Date.now() }, sitio: { ...prev.sitio } }))
   }
 
   const markEnd = () => {
