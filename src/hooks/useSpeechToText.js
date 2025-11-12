@@ -1,0 +1,1 @@
+export const useSpeechToText = ()=>({ startListening: ()=>{}, isListening:false, error:null })
